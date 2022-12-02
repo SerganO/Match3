@@ -11,6 +11,7 @@ public class GridController : MonoBehaviour
     public event VoidFunc BuildCompleted;
     public GridFigureGenerator FigureGenerator;
     public GestureManager GestureManager;
+    public Canvas Canvas;
 
     [Header("UI")]
     public GameObject Grid;
@@ -96,6 +97,7 @@ public class GridController : MonoBehaviour
         Bind();
     }
 
+
     public void Rebuild()
     {
         Build();
@@ -147,7 +149,7 @@ public class GridController : MonoBehaviour
             float xDivider = 2;
             float yDivider = 2;
 
-            var offsetData = ScreenManager.Shared.ScaleOrientation(GridData, UIContainer);
+            var offsetData = ScreenManager.Shared.ScaleOrientation(GridData, UIContainer, Canvas);
 
             switch (offsetData.Item1)
             {
@@ -159,11 +161,11 @@ public class GridController : MonoBehaviour
                     break;
             }
 
-            scale = ScreenManager.Shared.scaleForGrid(GridData, UIContainer);
+            scale = ScreenManager.Shared.scaleForGrid(GridData, UIContainer, Canvas);
             var gridObject = BuildFuncStep();
             var center = UIContainer.gameObject.transform.position;
-            gridObject.transform.position = new Vector3(center.x - ScreenManager.Shared.MapWidthScreenToWorld(UIContainer.rect.width) / xDivider + scale / 2,
-                center.y - ScreenManager.Shared.MapHeightScreenToWorld(UIContainer.rect.height) / yDivider + scale / 2);
+            gridObject.transform.position = new Vector3(center.x - ScreenManager.Shared.MapWidthScreenToWorld(UIContainer.rect.width) * Canvas.scaleFactor / xDivider + scale / 2,
+                center.y - ScreenManager.Shared.MapHeightScreenToWorld(UIContainer.rect.height) * Canvas.scaleFactor / yDivider + scale / 2);
             GridObject = gridObject;
         } else
         {

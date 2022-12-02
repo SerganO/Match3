@@ -964,6 +964,7 @@ MonoBehaviour:
   turnInProcess: 0
   FigureGenerator: {fileID: 784481296}
   GestureManager: {fileID: 784481297}
+  Canvas: {fileID: 1378345703}
   Grid: {fileID: 4313397896725321389, guid: f51f8204209e2184795fef8cf36b296c, type: 3}
   GridLine: {fileID: 7316571399268891761, guid: d9b6edec2fd2c644282719b8fbedfd6b, type: 3}
   GridCell: {fileID: -8188683367896127992, guid: dd8eeba79dccd48489f0d7585aa51315, type: 3}
@@ -2251,12 +2252,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1080, y: 1920}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96

@@ -101,10 +101,10 @@ public class ScreenManager
         Vertical
     }
 
-    public (PositionOrientation, float) ScaleOrientation(GridData gridData, RectTransform uiContainer)
+    public (PositionOrientation, float) ScaleOrientation(GridData gridData, RectTransform uiContainer, Canvas parentCanvas)
     {
-        var width = uiContainer.rect.width;
-        var height = uiContainer.rect.height;
+        var width = uiContainer.rect.width * parentCanvas.scaleFactor;
+        var height = uiContainer.rect.height * parentCanvas.scaleFactor;
 
         var elementWidth = width / gridData.Width;
         var elementHeight = height / gridData.Height;
@@ -124,10 +124,10 @@ public class ScreenManager
     }
 
 
-    public float scaleForGrid(GridData gridData, RectTransform uiContainer)
+    public float scaleForGrid(GridData gridData, RectTransform uiContainer, Canvas parentCanvas)
     {
-        var width = uiContainer.rect.width;
-        var height = uiContainer.rect.height;
+        var width = uiContainer.rect.width * parentCanvas.scaleFactor;
+        var height = uiContainer.rect.height * parentCanvas.scaleFactor;
 
         var elementWidth = width / gridData.Width;
         var elementHeight = height / gridData.Height;
