@@ -7,7 +7,7 @@ using UnityEngine;
 public class TileData
 {
     public string Type;
-    public bool IsMovable;
+    public bool IsMoved;
     public bool IsForDelete;
 
     public int x;

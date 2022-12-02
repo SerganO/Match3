@@ -7,6 +7,19 @@ using UnityEngine.EventSystems;
 [SelectionBase]
 public class GridController : MonoBehaviour
 {
+    class BoosterPoint {
+        public int x;
+        public int y;
+        public string boosterType;
+
+        public BoosterPoint(int x, int y, string boosterType)
+        {
+            this.x = x;
+            this.y = y;
+            this.boosterType = boosterType;
+        }
+    }
+
     public bool turnInProcess = false;
     public event VoidFunc BuildCompleted;
     public GridFigureGenerator FigureGenerator;
@@ -281,7 +294,7 @@ public class GridController : MonoBehaviour
                 }
             }
         }
-       
+
         figures.ForEach(figList =>
         {
             figList.ForEach(fig =>
@@ -297,6 +310,99 @@ public class GridController : MonoBehaviour
     }
     public void UpdateMap()
     {
+        var boosterPoints = new List<BoosterPoint>();
+        //VerticalCheck
+        for (int i = 0; i < GridData.Width; i++)
+        {
+            var lastType = "";
+            var count = 0;
+            var preX = -1;
+            var preY = -1;
+            for (int j = 0; j < GridData.Height; j++)
+            {
+                var figure = figures[i][j];
+                var figureType = figure.Type;
+                if (!figure.TileData.IsForDelete || lastType != figureType)
+                {
+                    if (count == 4)
+                    {
+                        boosterPoints.Add(new BoosterPoint(preX, preY, "Horizontal"));
+                    }
+                    else if (count > 4)
+                    {
+                        boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
+                    }
+
+                    lastType = figureType;
+                    count = 1;
+                    preX = -1;
+                    preY = -1;
+                }
+                else
+                {
+                    count++;
+                    if (preX == -1) preX = i;
+                    else if (figure.TileData.IsMoved) preX = i;
+                    if (preY == -1) preY = j;
+                    else if (figure.TileData.IsMoved) preY = j;
+                }
+            }
+            if (count == 4)
+            {
+                boosterPoints.Add(new BoosterPoint(preX, preY, "Horizontal"));
+            }
+            else if (count > 4)
+            {
+                boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
+            }
+        }
+
+        //HorizontalCheck
+        for (int j = 0; j < GridData.Height; j++)
+        {
+            var lastType = "";
+            var count = 0;
+            var preX = -1;
+            var preY = -1;
+            for (int i = 0; i < GridData.Width; i++)
+            {
+                var figure = figures[i][j];
+                var figureType = figure.Type;
+                if (!figure.TileData.IsForDelete || lastType != figureType)
+                {
+                    if (count == 4)
+                    {
+                        boosterPoints.Add(new BoosterPoint(preX, preY, "Vertical"));
+                    }
+                    else if (count > 4)
+                    {
+                        boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
+                    }
+
+                    lastType = figureType;
+                    count = 1;
+                    preX = -1;
+                    preY = -1;
+                }
+                else
+                {
+                    count++;
+                    if (preX == -1) preX = i;
+                    else if (figure.TileData.IsMoved) preX = i;
+                    if (preY == -1) preY = j;
+                    else if (figure.TileData.IsMoved) preY = j;
+                }
+            }
+            if (count == 4)
+            {
+                boosterPoints.Add(new BoosterPoint(preX, preY, "Vertical"));
+            }
+            else if (count > 4)
+            {
+                boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
+            }
+        }
+        var scores = 0;
         var addList = new List<int>();
         for (int i = 0; i < GridData.Width; i++)
             addList.Add(0);
@@ -309,20 +415,36 @@ public class GridController : MonoBehaviour
 
                 if (fig.TileData.IsForDelete)
                 {
-                    for (int h = j - 1; h >= 0; h--)
+                    var boosterPoint = boosterPoints.Find(point => point.x == i && point.y == j);
+                    if(boosterPoint != null)
                     {
-                        if (!figures[i][h].TileData.IsForDelete && !figures[i][h].TileData.IsMovable)
+                        var obj = BaseResourcesSuppliers.PrefabsSupplier.GetObjectForID(boosterPoint.boosterType, "Booster").GetComponent<TileObject>();
+                        var booster = Instantiate(obj, FiguresParent);
+                        booster.transform.localScale = new Vector3(scale, scale, 1);
+                        booster.TileData.x = i;
+                        booster.TileData.y = j;
+                        Destroy(figures[i][j].gameObject);
+                        figures[i][j] = booster;
+                        scores++;
+
+                    } else
+                    {
+                        for (int h = j - 1; h >= 0; h--)
                         {
-                            figures[i][h].TileData.y = j;
-                            figures[i][h].TileData.IsMovable = true;
-                            break;
+                            if (!figures[i][h].TileData.IsForDelete && !figures[i][h].TileData.IsMoved)
+                            {
+                                figures[i][h].TileData.y = j;
+                                figures[i][h].TileData.IsMoved = true;
+                                break;
+                            }
                         }
+                        addList[i]++;
                     }
-                    addList[i]++;
+                   
                 }
             }
         }
-        var scores = 0;
+       
         for (int i = GridData.Width - 1; i >= 0; i--)
         {
             for (int j = GridData.Height - 1; j >= 0; j--)
@@ -361,7 +483,7 @@ public class GridController : MonoBehaviour
                 MoveToIndexes(i, j);
                 figures[i][j].TileData.x = i;
                 figures[i][j].TileData.y = j;
-                figures[i][j].TileData.IsMovable = false;
+                figures[i][j].TileData.IsMoved = false;
             }
         }
 
@@ -384,6 +506,7 @@ public class GridController : MonoBehaviour
     {
         turnInProcess = true;
         SwapFiguresLogic(tile1.TileData.x, tile1.TileData.y, tile2.TileData.x, tile2.TileData.y);
+        
         MoveToIndexes(tile1.TileData.x, tile1.TileData.y);
         MoveToIndexes(tile2.TileData.x, tile2.TileData.y);
 
@@ -391,6 +514,8 @@ public class GridController : MonoBehaviour
         tile2.Deselect();
         if (WithCheck)
         {
+            tile1.TileData.IsMoved = true;
+            tile2.TileData.IsMoved = true;
             Helper.Wait(this, 0.15f, () =>
             {
                 if (Check())
@@ -405,6 +530,8 @@ public class GridController : MonoBehaviour
                 }
             });
         } else {
+            tile1.TileData.IsMoved = false;
+            tile2.TileData.IsMoved = false;
             turnInProcess = false;
         }
 

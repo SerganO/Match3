@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class BaseResourcesSupplirs
+public static class BaseResourcesSuppliers
 {
     public static ResourcesSupplier<Sprite> SpriteSupplier = new ResourcesSupplier<Sprite>("Sprites");
     public static ResourcesSupplier<AudioClip> AudioSupplier = new ResourcesSupplier<AudioClip>("Audios");

@@ -27,14 +27,14 @@ public class GridFigureGenerator : MonoBehaviour
     public TileObject NextRandomFigures(List<string> availableFiguresTypes, Transform parent)
     {
         var type = availableFiguresTypes[UnityEngine.Random.Range(0, availableFiguresTypes.Count)];
-        var figure = Instantiate(BaseResourcesSupplirs.PrefabsSupplier.GetObjectForID(type, "TileFigure"), parent).GetComponent<TileObject>();
+        var figure = Instantiate(BaseResourcesSuppliers.PrefabsSupplier.GetObjectForID(type, "TileFigure"), parent).GetComponent<TileObject>();
         figure.transform.localScale = new Vector3(scale, scale, 1);
         return figure;
     }
 
     public TileObject FigureForTypeString(string type, Transform parent)
     {
-        var figure = Instantiate(BaseResourcesSupplirs.PrefabsSupplier.GetObjectForID(type, "TileFigure"), parent).GetComponent<TileObject>();
+        var figure = Instantiate(BaseResourcesSuppliers.PrefabsSupplier.GetObjectForID(type, "TileFigure"), parent).GetComponent<TileObject>();
         figure.transform.localScale = new Vector3(scale, scale, 1);
         return figure;
     }

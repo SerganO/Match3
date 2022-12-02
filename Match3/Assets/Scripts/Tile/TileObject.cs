@@ -75,7 +75,7 @@ public class TileObject : MonoBehaviour
 
     public void AfterBoom()
     {
-        spriteRenderer.sprite = BaseResourcesSupplirs.SpriteSupplier.GetObjectForID("Cell");
+        spriteRenderer.sprite = BaseResourcesSuppliers.SpriteSupplier.GetObjectForID("Cell");
     }
 
     private void OnMouseDown()
