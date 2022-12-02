@@ -38,6 +38,13 @@ public class GridController : MonoBehaviour
     [Header("Data")]
     public GridData GridData;
 
+    List<string> allBoostersList = new List<string> { 
+        "Vertical",
+        "Horizontal",
+        "Multi"
+    
+    };
+
     int gridWidth
     {
         get
@@ -233,10 +240,10 @@ public class GridController : MonoBehaviour
     }
 
 
-    public void Turn()
+    public void Turn(bool forceCheck = false)
     {
         turnInProcess = true;
-        if (Check())
+        if (Check() || forceCheck)
         {
 
             Helper.Wait(this, 0.75f, () => {
@@ -504,31 +511,59 @@ public class GridController : MonoBehaviour
     }
     public void Swap(TileObject tile1, TileObject tile2, bool WithCheck = true)
     {
+        
         turnInProcess = true;
         SwapFiguresLogic(tile1.TileData.x, tile1.TileData.y, tile2.TileData.x, tile2.TileData.y);
         
         MoveToIndexes(tile1.TileData.x, tile1.TileData.y);
         MoveToIndexes(tile2.TileData.x, tile2.TileData.y);
 
+
         tile1.Deselect();
         tile2.Deselect();
+
+
         if (WithCheck)
         {
             tile1.TileData.IsMoved = true;
             tile2.TileData.IsMoved = true;
-            Helper.Wait(this, 0.15f, () =>
+            var firstIsBoost = allBoostersList.Contains(tile1.TileData.Type);
+            var secondIsBoost = allBoostersList.Contains(tile2.TileData.Type);
+
+            if (firstIsBoost || secondIsBoost)
             {
-                if (Check())
+                if(firstIsBoost && secondIsBoost)
                 {
-                    Turn();
-                }
-                else
+                    HandleDoubleBoost(tile1, tile2);
+                } else if (firstIsBoost)
                 {
-                    SelectedObject = null;
-                    Swap(tile1, tile2, false);
-                    turnInProcess = false;
+                    HandleBoost(tile1, tile2);
+                } else
+                {
+                    HandleBoost(tile2, tile1);
                 }
-            });
+
+                Turn(true);
+            }
+            else
+            {
+                Helper.Wait(this, 0.15f, () =>
+                {
+                    if (Check())
+                    {
+                        Turn();
+                    }
+                    else
+                    {
+                        SelectedObject = null;
+                        Swap(tile1, tile2, false);
+                        turnInProcess = false;
+                    }
+                });
+            }
+
+
+           
         } else {
             tile1.TileData.IsMoved = false;
             tile2.TileData.IsMoved = false;
@@ -536,6 +571,219 @@ public class GridController : MonoBehaviour
         }
 
 
+    }
+
+    public void HandleBoost(TileObject boostTile, TileObject swapPair)
+    {
+        boostTile.TileData.IsForDelete = true;
+        switch(boostTile.Type)
+        {
+            case "Multi":
+                figures.ForEach(figList =>
+                {
+                    figList.ForEach(fig =>
+                    {
+                        if(fig.Type == swapPair.Type)
+                        {
+                            fig.TileData.IsForDelete = true;
+                        }
+
+                    });
+
+
+                });
+                return;
+            case "Vertical":
+                for(int j = 0; j < gridHeight;j++)
+                {
+                    if (allBoostersList.Contains(figures[swapPair.X][j].Type) && !figures[swapPair.X][j].TileData.IsForDelete)
+                    {
+                        switch (figures[swapPair.X][j].Type)
+                        {
+
+                            case "Multi":
+                                HandleMultiStraight(figures[swapPair.X][j], figures[swapPair.X][j]);
+                                return;
+                            case "Vertical":
+                                HandleDoubleStraight(figures[swapPair.X][j], figures[swapPair.X][j]);
+                                return;
+                            case "Horizontal":
+                                HandleDoubleStraight(figures[swapPair.X][j], figures[swapPair.X][j]);
+                                return;
+                        }
+                    }
+                    else
+                    {
+                        figures[swapPair.X][j].TileData.IsForDelete = true;
+                    }
+                   
+                }
+                return;
+            case "Horizontal":
+                for (int i = 0; i < gridWidth; i++)
+                {
+                    if (allBoostersList.Contains(figures[i][swapPair.Y].Type) && !figures[i][swapPair.Y].TileData.IsForDelete)
+                    {
+                        switch (figures[i][swapPair.Y].Type)
+                        {
+
+                            case "Multi":
+                                HandleMultiStraight(figures[i][swapPair.Y], figures[i][swapPair.Y]);
+                                return;
+                            case "Vertical":
+                                HandleDoubleStraight(figures[i][swapPair.Y], figures[i][swapPair.Y]);
+                                return;
+                            case "Horizontal":
+                                HandleDoubleStraight(figures[i][swapPair.Y], figures[i][swapPair.Y]);
+                                return;
+                        }
+                    }
+                    else
+                    {
+                        figures[i][swapPair.Y].TileData.IsForDelete = true;
+                    }
+                   
+                }
+                break;
+
+        }
+    }
+
+    public void HandleDoubleBoost(TileObject boostTile, TileObject swapPair)
+    {
+        boostTile.TileData.IsForDelete = true;
+        swapPair.TileData.IsForDelete = true;
+        switch (boostTile.Type)
+        {
+            case "Multi":
+                switch (swapPair.Type)
+                {
+                    case "Multi":
+                        figures.ForEach(figList =>
+                        {
+                            figList.ForEach(fig =>
+                            {
+
+                                fig.TileData.IsForDelete = true;
+
+
+                            });
+                        });
+                        return;
+                    case "Vertical":
+                        HandleMultiStraight(boostTile, swapPair);
+                        return;
+                    case "Horizontal":
+                        HandleMultiStraight(boostTile, swapPair);
+                        return;
+
+                }
+                return;
+            case "Vertical":
+                switch (swapPair.Type)
+                {
+                    case "Multi":
+                        HandleMultiStraight(boostTile, swapPair);
+                        return;
+                    case "Vertical":
+                        HandleDoubleStraight(boostTile, swapPair);
+                        return;
+                    case "Horizontal":
+                        HandleDoubleStraight(boostTile, swapPair);
+                        return;
+
+                }
+                return;
+            case "Horizontal":
+                switch (swapPair.Type)
+                {
+                    case "Multi":
+                        HandleMultiStraight(boostTile, swapPair);
+                        return;
+                    case "Vertical":
+                        HandleDoubleStraight(boostTile, swapPair);
+                        return;
+                    case "Horizontal":
+                        HandleDoubleStraight(boostTile, swapPair);
+                        return;
+
+                }
+                return;
+
+        }
+    }
+
+    void HandleMultiStraight(TileObject boostTile, TileObject swapPair)
+    {
+        boostTile.TileData.IsForDelete = true;
+        swapPair.TileData.IsForDelete = true;
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                if(i == boostTile.X || i == boostTile.X + 1 || i == boostTile.X - 1 ||
+                    i == swapPair.X || i == swapPair.X + 1 || i == swapPair.X - 1 ||
+                    j == boostTile.Y || j == boostTile.Y + 1 || j == boostTile.Y - 1 ||
+                    j == swapPair.Y || j == swapPair.Y + 1 || j == swapPair.Y - 1)
+                {
+                    if (allBoostersList.Contains(figures[i][j].Type) && !figures[i][j].TileData.IsForDelete)
+                    {
+                        switch(figures[i][j].Type)
+                        {
+
+                            case "Multi":
+                                HandleMultiStraight(figures[i][j], figures[i][j]);
+                                return;
+                            case "Vertical":
+                                HandleDoubleStraight(figures[i][j], figures[i][j]);
+                                return;
+                            case "Horizontal":
+                                HandleDoubleStraight(figures[i][j], figures[i][j]);
+                                return;
+                        }
+                    } else
+                    {
+                        figures[i][j].TileData.IsForDelete = true;
+                    }
+                    
+                }
+            }
+        }
+    }
+
+    void HandleDoubleStraight(TileObject boostTile, TileObject swapPair)
+    {
+        boostTile.TileData.IsForDelete = true;
+        swapPair.TileData.IsForDelete = true;
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                if (i == boostTile.X || j == boostTile.Y ||  i == swapPair.X || j == swapPair.Y)
+                {
+                    if (allBoostersList.Contains(figures[i][j].Type) && !figures[i][j].TileData.IsForDelete)
+                    {
+                        switch (figures[i][j].Type)
+                        {
+
+                            case "Multi":
+                                HandleMultiStraight(figures[i][j], figures[i][j]);
+                                return;
+                            case "Vertical":
+                                HandleDoubleStraight(figures[i][j], figures[i][j]);
+                                return;
+                            case "Horizontal":
+                                HandleDoubleStraight(figures[i][j], figures[i][j]);
+                                return;
+                        }
+                    }
+                    else
+                    {
+                        figures[i][j].TileData.IsForDelete = true;
+                    }
+                }
+            }
+        }
     }
 
     private void CheckTurnAvailable()
