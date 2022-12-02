@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [SelectionBase]
 public class GridController : MonoBehaviour
@@ -9,16 +10,35 @@ public class GridController : MonoBehaviour
     public bool turnInProcess = false;
     public event VoidFunc BuildCompleted;
     public GridFigureGenerator FigureGenerator;
+    public GestureManager GestureManager;
 
     [Header("UI")]
     public GameObject Grid;
     public GameObject GridLine;
     public GridCell GridCell;
 
+    public RectTransform MessageContainer;
+
     public RectTransform UIContainer;
 
     [Header("Data")]
     public GridData GridData;
+
+    int gridWidth
+    {
+        get
+        {
+            return GridData.Width;
+        }
+    }
+
+    int gridHeight
+    {
+        get
+        {
+            return GridData.Height;
+        }
+    }
 
     public List<string> AvailableFiguresTypes = new List<string>();
 
@@ -72,9 +92,53 @@ public class GridController : MonoBehaviour
 
     private void Start()
     {
+        Rebuild();
+        Bind();
+    }
+
+    public void Rebuild()
+    {
         Build();
         InitFigures();
         Turn();
+    }
+
+    private void OnDestroy()
+    {
+        Unbind();
+    }
+
+    void Bind()
+    {
+        GestureManager.UpSwipe += GestureManager_UpSwipe;
+        GestureManager.DownSwipe += GestureManager_DownSwipe;
+        GestureManager.LeftSwipe += GestureManager_LeftSwipe;
+        GestureManager.RightSwipe += GestureManager_RightSwipe;
+    }
+
+    private void GestureManager_UpSwipe()
+    {
+        SwipeHandle(DraggedDirection.Up);
+    }
+     private void GestureManager_DownSwipe()
+    {
+        SwipeHandle(DraggedDirection.Down);
+    }
+     private void GestureManager_LeftSwipe()
+    {
+        SwipeHandle(DraggedDirection.Left);
+    }
+     private void GestureManager_RightSwipe()
+    {
+        SwipeHandle(DraggedDirection.Right);
+    }
+
+    void Unbind()
+    {
+        GestureManager.UpSwipe -= GestureManager_UpSwipe;
+        GestureManager.DownSwipe -= GestureManager_DownSwipe;
+        GestureManager.LeftSwipe -= GestureManager_LeftSwipe;
+        GestureManager.RightSwipe -= GestureManager_RightSwipe;
     }
     public void Build()
     {
@@ -137,8 +201,9 @@ public class GridController : MonoBehaviour
 
     public void InitFigures()
     {
+        FiguresParent.DestroyAllChilds();
         FigureGenerator.Setup(AvailableFiguresTypes, GridData.Width, GridData.Height, scale);
-        var figures = FigureGenerator.InitalFigures(FiguresParent);
+        var figures = FigureGenerator.AlternativeAutomergelessInitalFigures(FiguresParent);
         this.figures = figures;
         for (int i = 0;i < GridData.Width;i++)
         {
@@ -166,6 +231,7 @@ public class GridController : MonoBehaviour
         } else
         {
             UpdateMap();
+            CheckTurnAvailable();
             turnInProcess = false;
         }
         
@@ -213,7 +279,7 @@ public class GridController : MonoBehaviour
                 }
             }
         }
-
+       
         figures.ForEach(figList =>
         {
             figList.ForEach(fig =>
@@ -224,6 +290,7 @@ public class GridController : MonoBehaviour
                 }
             });
         });
+       
         return res;
     }
     public void UpdateMap()
@@ -253,6 +320,7 @@ public class GridController : MonoBehaviour
                 }
             }
         }
+        var scores = 0;
         for (int i = GridData.Width - 1; i >= 0; i--)
         {
             for (int j = GridData.Height - 1; j >= 0; j--)
@@ -262,10 +330,13 @@ public class GridController : MonoBehaviour
                    
                     Destroy(figures[i][j].gameObject);
                      figures[i].Remove(figures[i][j]);
+                    scores++;
                 }
                     
             }
         }
+        var levelHandler = GameObject.FindGameObjectWithTag("LevelHandler").GetComponent<LevelHandler>();
+        levelHandler.AddScores(scores);
 
         for (int i = 0; i < addList.Count; i++)
         {
@@ -338,9 +409,41 @@ public class GridController : MonoBehaviour
 
     }
 
+    private void CheckTurnAvailable()
+    {
+        var available = AvailableTurnExist();
+        Debug.Log($"available: {available}");
+        if (!available)
+        {
+            Debug.Log("No more turn");
+            var levelHandler = GameObject.FindGameObjectWithTag("LevelHandler").GetComponent<LevelHandler>();
+            levelHandler.ResetScores();
+            InitFigures();
+            Turn();
+
+        }
+    }
+
+    private bool AvailableTurnExist()
+    {
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                if (AvailableTurnForTile(i, j))
+                {
+                    Debug.Log($"{i} {j}");
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     public void Select(TileObject tile)
     {
+        Debug.Log("Select: " + tile.TileData.ToString());
         if(SelectedObject == null)
         {
             SelectedObject= tile;
@@ -371,4 +474,76 @@ public class GridController : MonoBehaviour
     {
         SelectedObject = null;
     }
+
+    public void SwipeHandle(DraggedDirection draggedDirection)
+    {
+        if(SelectedObject != null) {
+            switch (draggedDirection)
+            {
+                case DraggedDirection.Up:
+                    if (SelectedObject.TileData.y > 0)
+                    {
+                        Swap(SelectedObject, figures[SelectedObject.TileData.x][SelectedObject.TileData.y - 1]);
+                    }
+                    break;
+                case DraggedDirection.Down:
+                    if (SelectedObject.TileData.y < GridData.Height - 1)
+                    {
+                        Swap(SelectedObject, figures[SelectedObject.TileData.x][SelectedObject.TileData.y + 1]);
+                    }
+                    break;
+                case DraggedDirection.Right:
+                    if (SelectedObject.TileData.x < GridData.Width - 1)
+                    {
+                        Swap(SelectedObject, figures[SelectedObject.TileData.x + 1][SelectedObject.TileData.y]);
+                    }
+                    break;
+                case DraggedDirection.Left:
+                    if (SelectedObject.TileData.x > 0)
+                    {
+                        Swap(SelectedObject, figures[SelectedObject.TileData.x - 1][SelectedObject.TileData.y]);
+                    }
+                    break;
+            }
+
+        }
+
+    }
+    
+    string FiguresType(int x, int y)
+    {
+        if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return "";
+        return figures[x][y].Type;
+    }
+
+    bool HaveSameTypes(int x, int y, string type)
+    {
+        var figureType = FiguresType(x, y);
+        if (figureType == "") return false;
+        return figureType == type;
+    }
+
+    bool AvailableTurnForTile(int x, int y)
+    {
+        var figureType = FiguresType(x, y);
+        if (figureType == "") return false;
+        return (HaveSameTypes(x - 3, y, figureType) && HaveSameTypes(x - 2, y, figureType)) ||
+                (HaveSameTypes(x - 1, y - 1, figureType) && HaveSameTypes(x - 2, y - 1, figureType)) ||
+                (HaveSameTypes(x + 3, y - 0, figureType) && HaveSameTypes(x + 2, y - 0, figureType)) ||
+                (HaveSameTypes(x - 2, y + 1, figureType) && HaveSameTypes(x - 1, y + 1, figureType)) ||
+                (HaveSameTypes(x + 2, y + 1, figureType) && HaveSameTypes(x + 1, y + 1, figureType)) ||
+                (HaveSameTypes(x + 2, y - 1, figureType) && HaveSameTypes(x + 1, y - 1, figureType)) ||
+                (HaveSameTypes(x, y - 3, figureType) && HaveSameTypes(x, y - 2, figureType)) ||
+                (HaveSameTypes(x, y + 3, figureType) && HaveSameTypes(x, y + 2, figureType)) ||
+                (HaveSameTypes(x + 1, y + 1, figureType) && HaveSameTypes(x + 1, y + 2, figureType)) ||
+                (HaveSameTypes(x - 1, y + 1, figureType) && HaveSameTypes(x - 1, y + 2, figureType)) ||
+                (HaveSameTypes(x + 1, y - 1, figureType) && HaveSameTypes(x + 1, y - 2, figureType)) ||
+                (HaveSameTypes(x - 1, y - 1, figureType) && HaveSameTypes(x - 1, y - 2, figureType)) ||
+                (HaveSameTypes(x + 1, y - 1, figureType) && HaveSameTypes(x - 1, y - 1, figureType)) ||
+               (HaveSameTypes(x + 1, y + 1, figureType) && HaveSameTypes(x - 1, y + 1, figureType)) ||
+                (HaveSameTypes(x - 1, y - 1, figureType) && HaveSameTypes(x - 1, y + 1, figureType)) ||
+                (HaveSameTypes(x + 1, y - 1, figureType) && HaveSameTypes(x + 1, y + 1, figureType));
+    }
+
+
 }

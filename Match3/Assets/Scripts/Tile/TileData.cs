@@ -12,4 +12,9 @@ public class TileData
 
     public int x;
     public int y;
+
+    public override string ToString()
+    {
+        return Type + ": " + x + " " + y;
+    }
 }

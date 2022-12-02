@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(Animator))]
@@ -12,7 +14,9 @@ public class TileObject : MonoBehaviour
     [SerializeField]
     private TileData tileData;
 
-    public bool IsSelect = false;
+    private Color tileColor;
+
+    public bool IsSelected = false;
     public TileData TileData { 
         get { 
             return tileData; 
@@ -22,11 +26,36 @@ public class TileObject : MonoBehaviour
         } 
     }
 
+    public string Type
+    {
+        get
+        {
+            return tileData.Type;
+        }
+    }
+
+    public int X
+    {
+        get
+        {
+            return tileData.x;
+        }
+    }
+
+    public int Y
+    {
+        get
+        {
+            return tileData.y;
+        }
+    }
+
 
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
+        tileColor = spriteRenderer.color;
     }
     private void Setup()
     {
@@ -53,7 +82,7 @@ public class TileObject : MonoBehaviour
     {
         var gridController = GameObject.FindGameObjectWithTag("GridController").GetComponent<GridController>();
         if (gridController.turnInProcess) return;
-        if (IsSelect)
+        if (IsSelected)
         {
             Deselect();
             gridController.Deselect(this);
@@ -65,12 +94,12 @@ public class TileObject : MonoBehaviour
 
     public void Select()
     {
-        spriteRenderer.color = Color.gray;
-        IsSelect= true;
+        spriteRenderer.color = new Color(tileColor.r, tileColor.g, tileColor.b, 0.5f);
+        IsSelected= true;
     }
     public void Deselect()
     {
-        spriteRenderer.color = Color.white;
-        IsSelect= false;
+        spriteRenderer.color = tileColor;
+        IsSelected= false;
     }
 }

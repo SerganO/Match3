@@ -10,6 +10,13 @@ public delegate void IntFunc(int value);
 public delegate void FloatFunc(float value);
 public delegate void StringFunc(string value);
 
+public enum DraggedDirection
+{
+    Up,
+    Down,
+    Right,
+    Left
+}
 public static class Helper
 {
     public static T DeepClone<T>(T obj)
