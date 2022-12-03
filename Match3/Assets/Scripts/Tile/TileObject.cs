@@ -10,6 +10,7 @@ public class TileObject : MonoBehaviour
 {
     private SpriteRenderer spriteRenderer;
     private Animator animator;
+    private ParticleSystem particleSystem;
 
     [SerializeField]
     private TileData tileData;
@@ -55,6 +56,7 @@ public class TileObject : MonoBehaviour
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
+        particleSystem = GetComponent<ParticleSystem>();
         tileColor = spriteRenderer.color;
     }
     private void Setup()
@@ -70,13 +72,9 @@ public class TileObject : MonoBehaviour
     public void Boom()
     {
         animator.Play("boom");
-        Helper.Wait(this, 0.5f, AfterBoom);
+        particleSystem.Play();
     }
 
-    public void AfterBoom()
-    {
-        spriteRenderer.sprite = BaseResourcesSuppliers.SpriteSupplier.GetObjectForID("Cell");
-    }
 
     private void OnMouseDown()
     {
