@@ -500,7 +500,7 @@ public class GridController : MonoBehaviour
     public void MoveToIndexes(int x, int y)
     {
         var startPoint = TopLeftCell.transform.position;
-        figures[x][y].transform.position = new Vector3(startPoint.x + scale * x, startPoint.y - scale * y);
+        figures[x][y].transform.position = new Vector3(startPoint.x + scale * x, startPoint.y - scale * y, figures[x][y].transform.position.z);
     }
 
     public void SwapFiguresLogic(int x1, int y1, int x2, int y2)
