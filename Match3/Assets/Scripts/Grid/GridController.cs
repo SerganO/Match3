@@ -184,8 +184,8 @@ public class GridController : MonoBehaviour
             scale = ScreenManager.Shared.scaleForGrid(GridData, UIContainer, Canvas);
             var gridObject = BuildFuncStep();
             var center = UIContainer.gameObject.transform.position;
-            gridObject.transform.position = new Vector3(center.x - ScreenManager.Shared.MapWidthScreenToWorld(UIContainer.rect.width) * Canvas.scaleFactor / xDivider + scale / 2,
-                center.y - ScreenManager.Shared.MapHeightScreenToWorld(UIContainer.rect.height) * Canvas.scaleFactor / yDivider + scale / 2);
+            gridObject.transform.position = new Vector3(center.x - ScreenManager.Shared.MapWidthScreenToWorld(UIContainer.rect.width * Canvas.scaleFactor) / xDivider + scale / 2,
+                center.y - ScreenManager.Shared.MapHeightScreenToWorld(UIContainer.rect.height * Canvas.scaleFactor) / yDivider + scale / 2);
             GridObject = gridObject;
         } else
         {
@@ -807,7 +807,7 @@ public class GridController : MonoBehaviour
         {
             for (int j = 0; j < gridHeight; j++)
             {
-                if (AvailableTurnForTile(i, j))
+                if (allBoostersList.Contains(figures[i][j].Type) || AvailableTurnForTile(i, j))
                 {
                     Debug.Log($"{i} {j}");
                     return true;
