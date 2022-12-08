@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,6 +8,27 @@ using UnityEngine.EventSystems;
 [SelectionBase]
 public class GridController : MonoBehaviour
 {
+    public enum BoosterType
+    {
+        Vertical, Horizontal, Multi, Bomb
+    }
+
+    public enum LogicBooster {
+        None,
+        Vertical, Horizontal, Multi, Bomb,
+
+        DoubleStraight,
+        MultiVertical,
+        VerticalBomb,
+        MultiHorizontal,
+        HorizontalBomb,
+        Total,
+        MultiBomb,
+        HighBomb
+
+    }
+
+
     class BoosterPoint {
         public int x;
         public int y;
@@ -41,7 +63,8 @@ public class GridController : MonoBehaviour
     List<string> allBoostersList = new List<string> { 
         "Vertical",
         "Horizontal",
-        "Multi"
+        "Multi",
+        "Bomb"
     
     };
 
@@ -318,6 +341,8 @@ public class GridController : MonoBehaviour
     public void UpdateMap()
     {
         var boosterPoints = new List<BoosterPoint>();
+        var figuresForDeletes = new List<List<Vector2Int>>();
+        var currentDeleteLine = new List<Vector2Int>();
         //VerticalCheck
         for (int i = 0; i < GridData.Width; i++)
         {
@@ -325,10 +350,12 @@ public class GridController : MonoBehaviour
             var count = 0;
             var preX = -1;
             var preY = -1;
+            currentDeleteLine = new List<Vector2Int>();
             for (int j = 0; j < GridData.Height; j++)
             {
                 var figure = figures[i][j];
                 var figureType = figure.Type;
+                
                 if (!figure.TileData.IsForDelete || lastType != figureType)
                 {
                     if (count == 4)
@@ -339,21 +366,35 @@ public class GridController : MonoBehaviour
                     {
                         boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
                     }
+                    if (count >= 3)
+                    {
+                        figuresForDeletes.Add(currentDeleteLine);
+                    }
 
                     lastType = figureType;
                     count = 1;
                     preX = -1;
                     preY = -1;
+                    currentDeleteLine = new List<Vector2Int>(){
+                        new Vector2Int(i, j) 
+                    };
+    
                 }
                 else
                 {
                     count++;
+                    currentDeleteLine.Add(new Vector2Int(i, j));
                     if (preX == -1) preX = i;
                     else if (figure.TileData.IsMoved) preX = i;
                     if (preY == -1) preY = j;
                     else if (figure.TileData.IsMoved) preY = j;
                 }
             }
+            if (count >= 3)
+            {
+                figuresForDeletes.Add(currentDeleteLine);
+            }
+
             if (count == 4)
             {
                 boosterPoints.Add(new BoosterPoint(preX, preY, "Horizontal"));
@@ -364,6 +405,7 @@ public class GridController : MonoBehaviour
             }
         }
 
+        currentDeleteLine = new List<Vector2Int>();
         //HorizontalCheck
         for (int j = 0; j < GridData.Height; j++)
         {
@@ -371,6 +413,7 @@ public class GridController : MonoBehaviour
             var count = 0;
             var preX = -1;
             var preY = -1;
+            currentDeleteLine = new List<Vector2Int>();
             for (int i = 0; i < GridData.Width; i++)
             {
                 var figure = figures[i][j];
@@ -385,21 +428,38 @@ public class GridController : MonoBehaviour
                     {
                         boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
                     }
+                    if(figuresForDeletes.Count > 0 && count >= 3)
+                    {
+                        var intersect = figuresForDeletes.Find(list => { return list.Intersect(currentDeleteLine).ToList().Count > 0; });
+                        if (intersect != null)
+                        {
+                            if (boosterPoints.Find(point => point.x == intersect.First().x && point.y == intersect.First().y) == null)
+                                boosterPoints.Add(new BoosterPoint(intersect.First().x, intersect.First().y, "Bomb"));
+                        }
+                    }
+                    
 
                     lastType = figureType;
                     count = 1;
+                    currentDeleteLine = new List<Vector2Int>
+                    {
+                        new Vector2Int(i, j)
+                    };
                     preX = -1;
                     preY = -1;
                 }
                 else
                 {
                     count++;
+                    currentDeleteLine.Add(new Vector2Int(i, j));
                     if (preX == -1) preX = i;
                     else if (figure.TileData.IsMoved) preX = i;
                     if (preY == -1) preY = j;
                     else if (figure.TileData.IsMoved) preY = j;
                 }
             }
+
+            
             if (count == 4)
             {
                 boosterPoints.Add(new BoosterPoint(preX, preY, "Vertical"));
@@ -407,6 +467,15 @@ public class GridController : MonoBehaviour
             else if (count > 4)
             {
                 boosterPoints.Add(new BoosterPoint(preX, preY, "Multi"));
+            }
+            if (figuresForDeletes.Count > 0 && count >= 3)
+            {
+                var intersect = figuresForDeletes.Find(list => { return list.Intersect(currentDeleteLine).ToList().Count > 0; });
+                if (intersect != null)
+                {
+                    if (boosterPoints.Find(point => point.x == intersect.First().x && point.y == intersect.First().y) == null)
+                        boosterPoints.Add(new BoosterPoint(intersect.First().x, intersect.First().y, "Bomb"));
+                }
             }
         }
         var scores = 0;
@@ -534,13 +603,13 @@ public class GridController : MonoBehaviour
             {
                 if(firstIsBoost && secondIsBoost)
                 {
-                    HandleDoubleBoost(tile1, tile2);
+                    HandleBoostSwap(tile1, tile2, true);
                 } else if (firstIsBoost)
                 {
-                    HandleBoost(tile1, tile2);
+                    HandleBoostSwap(tile1, tile2, false);
                 } else
                 {
-                    HandleBoost(tile2, tile1);
+                    HandleBoostSwap(tile2, tile1, false);
                 }
 
                 Turn(true);
@@ -573,7 +642,266 @@ public class GridController : MonoBehaviour
 
     }
 
-    public void HandleBoost(TileObject boostTile, TileObject swapPair)
+    public void HandleBoostAuto(TileObject boostTile)
+    {
+        var boosterType = BoosterType.Parse<BoosterType>(boostTile.Type);
+        boostTile.TileData.IsForDelete = true;
+        switch (boosterType)
+        {
+            case BoosterType.Vertical:
+            case BoosterType.Horizontal:
+                HandleHorizontal(boostTile.Y);
+                HandleVertical(boostTile.X);
+                break;
+            case BoosterType.Multi:
+                HandleBomb(boostTile, 4);
+                break;
+            case BoosterType.Bomb:
+                HandleBomb(boostTile, 2);
+                break;
+
+        }
+    }
+
+    public LogicBooster GetBoosterResult(TileObject tile1, TileObject tile2)
+    {
+        var compositeType = tile1.Type + tile2.Type;
+        switch(compositeType)
+        {
+            case "VerticalVertical":
+            case "VerticalHorizontal":
+            case "HorizontalVertical":
+            case "HorizontalHorizontal":
+                return LogicBooster.DoubleStraight;
+            case "MultiMulti":
+                return LogicBooster.Total;
+            case "BombBomb":
+                return LogicBooster.HighBomb;
+            case "MultiBomb":
+            case "BombMulti":
+                return LogicBooster.MultiBomb;
+            case "VerticalBomb":
+            case "BombVertical":
+                return LogicBooster.VerticalBomb;
+            case "HorizontalBomb":
+            case "BombHorizontal":
+                return LogicBooster.VerticalBomb;
+            case "MultiVertical":
+            case "VerticalMulti":
+                return LogicBooster.MultiVertical;
+            case "MultiHorizontal":
+            case "HorizontalMulti":
+                return LogicBooster.MultiHorizontal;
+
+        }
+
+
+        return LogicBooster.None;
+    }
+
+    public void HandleBoostSwap(TileObject boostTile, TileObject swapPair, bool isDoubleBoost)
+    {
+
+        if (isDoubleBoost)
+        {
+            boostTile.TileData.IsForDelete = true;
+            swapPair.TileData.IsForDelete = true;
+            var boosterType = GetBoosterResult(boostTile, swapPair);
+            switch (boosterType)
+            {
+                case LogicBooster.None:
+                    break;
+                case LogicBooster.Vertical:
+                    HandleVertical(swapPair.X);
+                    break;
+                case LogicBooster.Horizontal:
+                    HandleHorizontal(swapPair.Y);
+                    break;
+                case LogicBooster.Multi:
+                    HandleMulti(swapPair.Type);
+                    break;
+                case LogicBooster.Bomb:
+                    var radius = 2;
+                    HandleBomb(swapPair, radius);
+                    break;
+                case LogicBooster.DoubleStraight:
+                    HandleVertical(swapPair.X);
+                    HandleHorizontal(swapPair.Y);
+                    break;
+                case LogicBooster.MultiVertical:
+                    var isXOdd = swapPair.X % 2 == 0;
+                    for (int i = 0; i < gridWidth; i++)
+                    {
+                        if (isXOdd)
+                        {
+                            if (i % 2 == 0) HandleVertical(i);
+                        }
+                        else
+                        {
+                            if (i % 2 != 0) HandleVertical(i);
+                        }
+                    }
+                    break;
+                case LogicBooster.VerticalBomb:
+                    var x = swapPair.X;
+                    if (x > 0)
+                    {
+                        HandleVertical(swapPair.X - 1);
+                    }
+                    HandleVertical(swapPair.X);
+                    if (x < gridWidth - 1)
+                    {
+                        HandleVertical(swapPair.X + 1);
+                    }
+                    break;
+                case LogicBooster.MultiHorizontal:
+                    var isYOdd = swapPair.Y % 2 == 0;
+                    for(int j =0;j<gridHeight;j++)
+                    {
+                        if(isYOdd)
+                        {
+                            if (j % 2 == 0) HandleHorizontal(j);
+                        } else
+                        {
+                            if (j % 2 != 0) HandleHorizontal(j);
+                        }
+                    }
+                    break;
+                case LogicBooster.HorizontalBomb:
+                    var y = swapPair.Y;
+                    if (y > 0)
+                    {
+                        HandleHorizontal(swapPair.Y - 1);
+                    }
+                    HandleHorizontal(swapPair.Y);
+                    if (y < gridHeight - 1)
+                    {
+                        HandleHorizontal(swapPair.Y + 1);
+                    }
+                    break;
+                case LogicBooster.Total:
+                    HandleTotal();
+                    break;
+                case LogicBooster.MultiBomb:
+                    var mRadiuis = (gridWidth + gridHeight) * 3 / 8;
+                    HandleBomb(swapPair, mRadiuis);
+                    break;
+                case LogicBooster.HighBomb:
+                    var hRadius = 4;
+                    HandleBomb(swapPair, hRadius);
+                    break;
+            }
+
+        }
+        else
+        {
+            boostTile.TileData.IsForDelete = true;
+            var boosterType = BoosterType.Parse<BoosterType>(boostTile.Type);
+            switch (boosterType)
+            {
+                case BoosterType.Vertical:
+                    HandleVertical(swapPair.X);
+                    break;
+                case BoosterType.Horizontal:
+                    HandleHorizontal(swapPair.Y);
+                    break;
+                case BoosterType.Multi:
+                    HandleMulti(swapPair.Type);
+                    break;
+                case BoosterType.Bomb:
+                    var radius = 2;
+                    HandleBomb(swapPair, radius);
+                    break;
+            }
+        }
+    }
+
+    private void HandleVertical(int line)
+    {
+        for (int j = 0; j < gridHeight; j++)
+        {
+            if (IsBoostAutoTurned(line, j))
+            {
+                HandleBoostAuto(figures[line][j]);
+            }
+            else
+            {
+                figures[line][j].TileData.IsForDelete = true;
+            }
+        }
+    }
+
+    private void HandleHorizontal(int line)
+    {
+        for (int i = 0; i < gridWidth; i++)
+        {
+            if (IsBoostAutoTurned(i, line))
+            {
+                HandleBoostAuto(figures[i][line]);
+            }
+            else
+            {
+                figures[i][line].TileData.IsForDelete = true;
+            }
+        }
+    }
+
+    private void HandleMulti(string type)
+    {
+        figures.ForEach(figList =>
+        {
+            figList.ForEach(fig =>
+            {
+                if (fig.Type == type)
+                {
+                    fig.TileData.IsForDelete = true;
+                }
+
+            });
+        });
+    }
+
+    private void HandleTotal()
+    {
+        figures.ForEach(figList =>
+        {
+            figList.ForEach(fig =>
+            {
+                fig.TileData.IsForDelete = true;
+            });
+        });
+    }
+
+    private void HandleBomb(TileObject swapPair, int radius)
+    {
+        int x = swapPair.X;
+        int y = swapPair.Y;
+        int startX = Mathf.Max(0, x - radius);
+        int startY = Mathf.Max(0, y - radius);
+        int finalX = Mathf.Min(gridWidth - 1, x + radius);
+        int finalY = Mathf.Min(gridHeight - 1, y + radius);
+        for (int i = startX; i <= finalX; i++)
+        {
+            for (int j = startY; j <= finalY; j++)
+            {
+                if (IsBoostAutoTurned(i, j))
+                {
+                    HandleBoostAuto(figures[i][j]);
+                }
+                else
+                {
+                    figures[i][j].TileData.IsForDelete = true;
+                }
+            }
+        }
+    }
+
+    private bool IsBoostAutoTurned(int x, int y)
+    {
+        return allBoostersList.Contains(figures[x][y].Type) && !figures[x][y].TileData.IsForDelete;
+    }
+
+   /* public void HandleBoost(TileObject boostTile, TileObject swapPair)
     {
         boostTile.TileData.IsForDelete = true;
         switch(boostTile.Type)
@@ -784,7 +1112,7 @@ public class GridController : MonoBehaviour
                 }
             }
         }
-    }
+    }*/
 
     private void CheckTurnAvailable()
     {
